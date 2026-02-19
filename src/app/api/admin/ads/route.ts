@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
+import { invalidateAdsCache } from '@/lib/ads';
+
+const VALID_PROVIDERS = ['adsense', 'adsterra', 'monetag', 'hilltopads', 'custom'] as const;
 
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const settings = await prisma.adsSetting.findFirst();
+  let settings = await prisma.adsSetting.findFirst();
+  if (!settings) {
+    settings = await prisma.adsSetting.create({ data: {} });
+  }
   return NextResponse.json({ settings });
 }
 
@@ -16,26 +22,38 @@ export async function PUT(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  let settings = await prisma.adsSetting.findFirst();
 
-  const data: any = {};
+  // Validate provider
+  if (body.provider && !VALID_PROVIDERS.includes(body.provider)) {
+    return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
+  }
+
+  // Validate slotsJson is valid JSON
+  if (body.slotsJson !== undefined) {
+    try {
+      JSON.parse(body.slotsJson);
+    } catch {
+      return NextResponse.json({ error: 'slotsJson must be valid JSON' }, { status: 400 });
+    }
+  }
+
+  const data: Record<string, unknown> = {};
   if (body.provider !== undefined) data.provider = body.provider;
-  if (body.isEnabled !== undefined) data.isEnabled = body.isEnabled;
-  if (body.adsensePublisherId !== undefined) data.adsensePublisherId = body.adsensePublisherId || null;
-  if (body.adsenseVerificationMeta !== undefined) data.adsenseVerificationMeta = body.adsenseVerificationMeta || null;
-  if (body.adsTxtContent !== undefined) data.adsTxtContent = body.adsTxtContent || null;
-  if (body.headerSlotId !== undefined) data.headerSlotId = body.headerSlotId || null;
-  if (body.sidebarSlotId !== undefined) data.sidebarSlotId = body.sidebarSlotId || null;
-  if (body.inContentSlotId !== undefined) data.inContentSlotId = body.inContentSlotId || null;
-  if (body.footerSlotId !== undefined) data.footerSlotId = body.footerSlotId || null;
-  if (body.customHeadHtml !== undefined) data.customHeadHtml = body.customHeadHtml || null;
-  if (body.customBodyHtml !== undefined) data.customBodyHtml = body.customBodyHtml || null;
+  if (body.adsenseClientId !== undefined) data.adsenseClientId = body.adsenseClientId;
+  if (body.adsTxtLines !== undefined) data.adsTxtLines = body.adsTxtLines;
+  if (body.headHtml !== undefined) data.headHtml = body.headHtml;
+  if (body.bodyHtml !== undefined) data.bodyHtml = body.bodyHtml;
+  if (body.slotsJson !== undefined) data.slotsJson = body.slotsJson;
+  if (body.verificationMeta !== undefined) data.verificationMeta = body.verificationMeta;
 
+  let settings = await prisma.adsSetting.findFirst();
   if (settings) {
     settings = await prisma.adsSetting.update({ where: { id: settings.id }, data });
   } else {
     settings = await prisma.adsSetting.create({ data });
   }
+
+  invalidateAdsCache();
 
   await prisma.auditLog.create({
     data: {

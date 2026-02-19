@@ -88,6 +88,8 @@ model PopularPair {
 
   @@unique([fromCityId, toCityId])
   @@index([priority])
+  @@index([fromCityId])
+  @@index([toCityId])
 }
 
 model SeoTemplate {

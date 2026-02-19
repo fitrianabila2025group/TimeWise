@@ -11,16 +11,12 @@ import { Save } from 'lucide-react';
 interface AdsSettings {
   id: string;
   provider: string;
-  isEnabled: boolean;
-  adsensePublisherId: string | null;
-  adsenseVerificationMeta: string | null;
-  adsTxtContent: string | null;
-  headerSlotId: string | null;
-  sidebarSlotId: string | null;
-  inContentSlotId: string | null;
-  footerSlotId: string | null;
-  customHeadHtml: string | null;
-  customBodyHtml: string | null;
+  adsenseClientId: string;
+  adsTxtLines: string;
+  headHtml: string;
+  bodyHtml: string;
+  slotsJson: string;
+  verificationMeta: string;
 }
 
 const providers = [
@@ -31,25 +27,44 @@ const providers = [
   { value: 'custom', label: 'Custom' },
 ];
 
+const DEFAULT_SLOTS = '{\n  "header": "",\n  "sidebar": "",\n  "inContent": "",\n  "footer": ""\n}';
+
 export default function AdminAdsPage() {
   const [settings, setSettings] = useState<AdsSettings | null>(null);
   const [form, setForm] = useState<Partial<AdsSettings>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [slotsError, setSlotsError] = useState('');
 
   const fetchData = useCallback(async () => {
     const res = await fetch('/api/admin/ads');
     if (res.ok) {
       const d = await res.json();
       setSettings(d.settings);
-      setForm(d.settings || {});
+      const s = d.settings || {};
+      // Pretty-print slotsJson for editing
+      let slotsJson = s.slotsJson || DEFAULT_SLOTS;
+      try {
+        slotsJson = JSON.stringify(JSON.parse(slotsJson), null, 2);
+      } catch { /* keep as-is */ }
+      setForm({ ...s, slotsJson });
     }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  function validateSlots(val: string) {
+    try {
+      JSON.parse(val);
+      setSlotsError('');
+    } catch {
+      setSlotsError('Invalid JSON');
+    }
+  }
+
   async function saveSettings(e: React.FormEvent) {
     e.preventDefault();
+    if (slotsError) return;
     setSaving(true);
     setSaved(false);
     const res = await fetch('/api/admin/ads', {
@@ -79,27 +94,15 @@ export default function AdminAdsPage() {
         <Card>
           <CardContent className="pt-6 space-y-4">
             <h2 className="font-semibold">Ad Provider</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Provider</Label>
-                <select
-                  className="w-full h-10 px-3 rounded-md border bg-background text-sm"
-                  value={form.provider || 'adsense'}
-                  onChange={e => setForm({ ...form, provider: e.target.value })}
-                >
-                  {providers.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </select>
-              </div>
-              <div className="flex items-end">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.isEnabled ?? false}
-                    onChange={e => setForm({ ...form, isEnabled: e.target.checked })}
-                  />
-                  Enable ads globally
-                </label>
-              </div>
+            <div>
+              <Label>Provider</Label>
+              <select
+                className="w-full h-10 px-3 rounded-md border bg-background text-sm"
+                value={form.provider || 'custom'}
+                onChange={e => setForm({ ...form, provider: e.target.value })}
+              >
+                {providers.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+              </select>
             </div>
           </CardContent>
         </Card>
@@ -110,49 +113,46 @@ export default function AdminAdsPage() {
             <CardContent className="pt-6 space-y-4">
               <h2 className="font-semibold">Google AdSense</h2>
               <div>
-                <Label>Publisher ID</Label>
+                <Label>Client ID</Label>
                 <Input
-                  value={form.adsensePublisherId || ''}
-                  onChange={e => setForm({ ...form, adsensePublisherId: e.target.value })}
+                  value={form.adsenseClientId || ''}
+                  onChange={e => setForm({ ...form, adsenseClientId: e.target.value })}
                   placeholder="ca-pub-XXXXXXXXXXXXXXXX"
                 />
+                <p className="text-xs text-muted-foreground mt-1">Your AdSense publisher client ID</p>
               </div>
               <div>
-                <Label>Verification Meta Tag</Label>
+                <Label>Verification Meta</Label>
                 <Input
-                  value={form.adsenseVerificationMeta || ''}
-                  onChange={e => setForm({ ...form, adsenseVerificationMeta: e.target.value })}
-                  placeholder='<meta name="google-adsense-account" content="ca-pub-...">'
+                  value={form.verificationMeta || ''}
+                  onChange={e => setForm({ ...form, verificationMeta: e.target.value })}
+                  placeholder="google-adsense-account=ca-pub-..."
                 />
-                <p className="text-xs text-muted-foreground mt-1">The full meta tag for site verification</p>
+                <p className="text-xs text-muted-foreground mt-1">Format: name=content (added as meta tag)</p>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Ad Slot IDs */}
+        {/* Ad Slots (JSON) */}
         <Card>
           <CardContent className="pt-6 space-y-4">
             <h2 className="font-semibold">Ad Slot Configuration</h2>
-            <p className="text-sm text-muted-foreground">Enter slot IDs for each ad position. Leave empty to disable that position.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Header Slot</Label>
-                <Input value={form.headerSlotId || ''} onChange={e => setForm({ ...form, headerSlotId: e.target.value })} placeholder="1234567890" />
-              </div>
-              <div>
-                <Label>Sidebar Slot</Label>
-                <Input value={form.sidebarSlotId || ''} onChange={e => setForm({ ...form, sidebarSlotId: e.target.value })} placeholder="1234567890" />
-              </div>
-              <div>
-                <Label>In-Content Slot</Label>
-                <Input value={form.inContentSlotId || ''} onChange={e => setForm({ ...form, inContentSlotId: e.target.value })} placeholder="1234567890" />
-              </div>
-              <div>
-                <Label>Footer Slot</Label>
-                <Input value={form.footerSlotId || ''} onChange={e => setForm({ ...form, footerSlotId: e.target.value })} placeholder="1234567890" />
-              </div>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              JSON object mapping position names to HTML snippets. Supported positions:
+              <code className="ml-1">header</code>, <code>sidebar</code>, <code>inContent</code>, <code>footer</code>.
+            </p>
+            <Textarea
+              value={form.slotsJson || DEFAULT_SLOTS}
+              onChange={e => {
+                setForm({ ...form, slotsJson: e.target.value });
+                validateSlots(e.target.value);
+              }}
+              rows={10}
+              className="font-mono text-xs"
+              placeholder={DEFAULT_SLOTS}
+            />
+            {slotsError && <p className="text-xs text-red-500">{slotsError}</p>}
           </CardContent>
         </Card>
 
@@ -161,11 +161,11 @@ export default function AdminAdsPage() {
           <CardContent className="pt-6 space-y-4">
             <h2 className="font-semibold">ads.txt</h2>
             <p className="text-sm text-muted-foreground">
-              Content served at /ads.txt for ad network verification
+              Content served at <code>/ads.txt</code> for ad network verification
             </p>
             <Textarea
-              value={form.adsTxtContent || ''}
-              onChange={e => setForm({ ...form, adsTxtContent: e.target.value })}
+              value={form.adsTxtLines || ''}
+              onChange={e => setForm({ ...form, adsTxtLines: e.target.value })}
               rows={6}
               className="font-mono text-xs"
               placeholder="google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0"
@@ -178,10 +178,10 @@ export default function AdminAdsPage() {
           <CardContent className="pt-6 space-y-4">
             <h2 className="font-semibold">Custom HTML Injection</h2>
             <div>
-              <Label>Custom Head HTML</Label>
+              <Label>Head HTML</Label>
               <Textarea
-                value={form.customHeadHtml || ''}
-                onChange={e => setForm({ ...form, customHeadHtml: e.target.value })}
+                value={form.headHtml || ''}
+                onChange={e => setForm({ ...form, headHtml: e.target.value })}
                 rows={4}
                 className="font-mono text-xs"
                 placeholder="<script>...</script>"
@@ -189,10 +189,10 @@ export default function AdminAdsPage() {
               <p className="text-xs text-muted-foreground mt-1">Injected before {'</head>'}</p>
             </div>
             <div>
-              <Label>Custom Body HTML</Label>
+              <Label>Body HTML</Label>
               <Textarea
-                value={form.customBodyHtml || ''}
-                onChange={e => setForm({ ...form, customBodyHtml: e.target.value })}
+                value={form.bodyHtml || ''}
+                onChange={e => setForm({ ...form, bodyHtml: e.target.value })}
                 rows={4}
                 className="font-mono text-xs"
                 placeholder="<script>...</script>"
@@ -203,7 +203,7 @@ export default function AdminAdsPage() {
         </Card>
 
         <div className="flex items-center gap-4">
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving || !!slotsError}>
             <Save className="h-4 w-4 mr-1" /> {saving ? 'Saving...' : 'Save All Settings'}
           </Button>
           {saved && <span className="text-sm text-green-600">Settings saved!</span>}

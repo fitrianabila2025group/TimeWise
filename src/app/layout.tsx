@@ -3,19 +3,18 @@ import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import prisma from '@/lib/prisma';
+import { getAdsSettings } from '@/lib/ads';
+import { getSiteSettings } from '@/lib/settings';
 
 const inter = Inter({ subsets: ['latin'] });
 
 async function getAdsAndSettings() {
   try {
     const [ads, settings] = await Promise.all([
-      prisma.adsSetting.findFirst(),
-      prisma.siteSetting.findMany(),
+      getAdsSettings(),
+      getSiteSettings(),
     ]);
-    const settingsMap: Record<string, string> = {};
-    for (const s of settings) settingsMap[s.key] = s.value;
-    return { ads, settings: settingsMap };
+    return { ads, settings };
   } catch {
     return { ads: null, settings: {} as Record<string, string> };
   }

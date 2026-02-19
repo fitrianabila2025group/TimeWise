@@ -40,13 +40,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Popular pairs (all of them for SEO)
   const pairs = await prisma.popularPair.findMany({
-    select: { slug: true, updatedAt: true },
+    select: { slug: true },
     orderBy: { priority: 'desc' },
   });
   for (const pair of pairs) {
     sitemaps.push({
       url: `${baseUrl}/time/${pair.slug}`,
-      lastModified: pair.updatedAt,
+      lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 0.8,
     });
