@@ -1,9 +1,14 @@
 import { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrlSetting = await prisma.siteSetting.findUnique({ where: { key: 'siteUrl' } });
-  const baseUrl = siteUrlSetting?.value || 'https://meetzone.es';
+  let baseUrl = 'https://meetzone.es';
+  try {
+    const siteUrlSetting = await prisma.siteSetting.findUnique({ where: { key: 'siteUrl' } });
+    baseUrl = siteUrlSetting?.value || baseUrl;
+  } catch {}
 
   // Count pairs for pagination
   const pairCount = await prisma.popularPair.count();

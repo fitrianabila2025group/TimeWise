@@ -44,16 +44,11 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Copy Prisma for runtime migrations
+# Copy Prisma schema & migrations for runtime migrate deploy
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
-# Copy seed dependencies
-COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
-COPY --from=builder /app/node_modules/tsx ./node_modules/tsx
-COPY --from=builder /app/node_modules/esbuild ./node_modules/esbuild
+# Copy full node_modules to ensure prisma CLI and all transitive deps are available
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy entrypoint
 COPY docker-entrypoint.sh ./

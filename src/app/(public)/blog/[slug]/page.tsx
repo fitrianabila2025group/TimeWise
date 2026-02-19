@@ -23,14 +23,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export async function generateStaticParams() {
-  const posts = await prisma.blogPost.findMany({
-    where: { isPublished: true },
-    select: { slug: true },
-  });
-  return posts.map((p: any) => ({ slug: p.slug }));
+  try {
+    const posts = await prisma.blogPost.findMany({
+      where: { isPublished: true },
+      select: { slug: true },
+    });
+    return posts.map((p: any) => ({ slug: p.slug }));
+  } catch {
+    return [];
+  }
 }
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 /**
  * Render content as HTML. If the content looks like markdown (starts with # or contains ##),

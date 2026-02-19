@@ -3,12 +3,15 @@ import prisma from '@/lib/prisma';
 
 const startTime = Date.now();
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   let dbStatus = 'ok';
   try {
-    await prisma.$queryRaw`SELECT 1`;
-  } catch {
+    await prisma.$queryRawUnsafe('SELECT 1');
+  } catch (e) {
     dbStatus = 'down';
+    console.error('Health check DB error:', e);
   }
 
   return NextResponse.json({

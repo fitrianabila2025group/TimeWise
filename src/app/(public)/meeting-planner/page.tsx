@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { getSiteUrl } from '@/lib/settings';
 import { MeetingPlannerClient } from '@/components/meeting-planner-client';
 
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata(): Promise<Metadata> {
   const siteUrl = await getSiteUrl();
   return {

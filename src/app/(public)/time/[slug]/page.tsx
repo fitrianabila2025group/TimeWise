@@ -21,7 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Calendar, Info, ArrowRight, Link2, Globe, MapPin } from 'lucide-react';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 interface Props {
   params: { slug: string };
@@ -518,10 +518,11 @@ async function PairPageContent({ data, slug }: { data: NonNullable<Awaited<Retur
         scope: 'pair' as const,
         question: applyTemplate(f.q, vars),
         answer: applyTemplate(f.a, vars),
-        order: 100 + i,
+        sortOrder: 100 + i,
         published: true,
-        fromCityId: null,
-        toCityId: null,
+        pairSlug: null as string | null,
+        fromCityId: null as string | null,
+        toCityId: null as string | null,
       }));
       // Merge: DB FAQs first, then template FAQs (avoiding duplicates)
       const dbQuestions = new Set(faqs.map((f: any) => f.question.toLowerCase()));

@@ -13,7 +13,7 @@ DB_RETRY_DELAY="${DB_RETRY_DELAY:-2}"
 if [ -n "$DATABASE_URL" ]; then
   echo "⏳ Waiting for database to be ready..."
   RETRIES=0
-  until npx prisma db execute --stdin <<'SQL' 2>/dev/null
+  until npx prisma db execute --schema prisma/schema.prisma --stdin <<'SQL' 2>/dev/null
 SELECT 1;
 SQL
   do
@@ -43,7 +43,7 @@ SQL
     npx prisma db seed 2>&1 || echo "⚠️  Seed had warnings, continuing..."
   else
     # Seed only if no admin user exists (first run)
-    ADMIN_COUNT=$(npx prisma db execute --stdin <<'SQL' 2>/dev/null | grep -c "ADMIN" || true
+    ADMIN_COUNT=$(npx prisma db execute --schema prisma/schema.prisma --stdin <<'SQL' 2>/dev/null | grep -c "ADMIN" || true
 SELECT role FROM "User" WHERE role = 'ADMIN' LIMIT 1;
 SQL
     )

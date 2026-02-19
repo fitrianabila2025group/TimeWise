@@ -8,7 +8,7 @@ import { Calendar, Clock, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 interface Props {
   params: { slug: string };

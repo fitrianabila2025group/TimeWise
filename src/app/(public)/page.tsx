@@ -6,7 +6,7 @@ import { CitySearch } from '@/components/city-search';
 import prisma from '@/lib/prisma';
 import { getSiteUrl } from '@/lib/settings';
 
-export const revalidate = 3600; // 1 hour
+export const dynamic = 'force-dynamic';
 
 async function getPopularPairs() {
   try {
