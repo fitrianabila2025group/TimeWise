@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -28,7 +26,7 @@ services:
       NEXTAUTH_SECRET: change-this-to-a-random-secret-at-least-32-chars
       NEXTAUTH_URL: http://localhost:3000
       ADMIN_EMAIL: admin@meetzone.es
-      ADMIN_PASSWORD: admin123
+      ADMIN_PASSWORD: Anonymous263
     depends_on:
       postgres:
         condition: service_healthy
